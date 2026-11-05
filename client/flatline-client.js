@@ -1,45 +1,40 @@
 // 1. Configure the fixed X-axis resolution
-const totalPoints = 300;     // Total width of your fixed X-axis
-const pointsPerBeat = 100;   // Controls the heart rate (smaller = faster HR)
+const totalPoints = 300;     // Visible window width (3 seconds of signal)
+const pointsPerBeat = 100;   // Samples per heartbeat
+const beatIntervalMs = 1000; // One heartbeat every second (60 BPM)
+const tickMs = beatIntervalMs / pointsPerBeat; // 10 ms per sample
 
-const xLabels = [];
-const yValues = [];
-
-// 2. Generate the EKG waveform data
-for (let i = 0; i < totalPoints; i++) {
-    xLabels.push(i); // Fixed X-axis coordinates (0 to 299)
-    
-    // Normalize t to a percentage (0.0 to 1.0) of a single heartbeat cycle
-    let t = (i % pointsPerBeat) / pointsPerBeat; 
-    let y = 0; // Isoelectric baseline
-
-    // Match the standard EKG segments to percentages of the cycle
+// 2. EKG waveform: returns the voltage for a position t (0.0 to 1.0) in one beat
+function ekgValue(t) {
     if (t > 0.05 && t <= 0.15) {
         // P Wave (Smooth bump)
-        y = Math.sin((t - 0.05) * Math.PI / 0.10) * 0.15;
+        return Math.sin((t - 0.05) * Math.PI / 0.10) * 0.15;
     } else if (t > 0.20 && t <= 0.23) {
         // Q Wave (Sharp dip down)
-        y = ((t - 0.20) / 0.03) * -0.15;
+        return ((t - 0.20) / 0.03) * -0.15;
     } else if (t > 0.23 && t <= 0.27) {
         // R Spike (The massive surge up)
-        y = -0.15 + ((t - 0.23) / 0.04) * 1.35; 
+        return -0.15 + ((t - 0.23) / 0.04) * 1.35;
     } else if (t > 0.27 && t <= 0.31) {
         // S Wave (Deep plunge below baseline)
-        y = 1.20 - ((t - 0.27) / 0.04) * 1.50;
+        return 1.20 - ((t - 0.27) / 0.04) * 1.50;
     } else if (t > 0.31 && t <= 0.35) {
         // Return to baseline from S wave
-        y = -0.30 + ((t - 0.31) / 0.04) * 0.30;
+        return -0.30 + ((t - 0.31) / 0.04) * 0.30;
     } else if (t > 0.45 && t <= 0.65) {
         // T Wave (Wider, medium smooth bump)
-        y = Math.sin((t - 0.45) * Math.PI / 0.20) * 0.35;
+        return Math.sin((t - 0.45) * Math.PI / 0.20) * 0.35;
     }
-
-    yValues.push(y);
+    return 0; // Isoelectric baseline
 }
+
+// Start with a flat line; the signal scrolls in from the right
+const xLabels = Array.from({ length: totalPoints }, (_, i) => i);
+const yValues = new Array(totalPoints).fill(0);
 
 // 3. Render the chart
 const ctx = document.getElementById('heartRateChart').getContext('2d');
-new Chart(ctx, {
+const chart = new Chart(ctx, {
     type: 'line',
     data: {
         labels: xLabels,
@@ -54,17 +49,23 @@ new Chart(ctx, {
         }]
     },
     options: {
-        responsive: true,
-        scales: {
-            x: {
-                display: false // Hides the 0-300 index labels for a clean medical look
-            },
-            y: {
-                min: -0.5,   // Lock the bounds so the spikes don't clip
-                max: 1.5,
-                display: false 
-            }
+        animation: false, // Redraws every 10 ms; tweening would smear the trace
+        interaction: {
+            intersect: false,
         },
-        animation: false // Disabling initial animations keeps the line crisp on load
+        scales: {
+            x: { display: false },
+            y: { min: -0.5, max: 1.5 }, // Fixed bounds so the axis doesn't jump
+        },
     }
 });
+
+// 4. Stream one sample every 10 ms -> one full beat per second
+let sample = 0;
+setInterval(() => {
+    const t = (sample % pointsPerBeat) / pointsPerBeat;
+    yValues.shift();
+    yValues.push(ekgValue(t));
+    sample++;
+    chart.update('none');
+}, tickMs);
