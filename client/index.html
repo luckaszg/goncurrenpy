@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goncurrenpy</title>
-    <script src="flatline-client.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.min.js" integrity="sha512-TTuOWSRAsUsJewIrDggWEFWinICEPrQQmXnvOcUBR1Pr6OolASB0EVdWpaV4Kx2d3XZpLenM2P2bM966S+bpww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.umd.min.js" integrity="sha512-vMRyUfXe50uUhhDC+fk6UYBA/1VPj+I7Jn+wK0A3+wSVeUgT9OCz/xoF2M8KFvrmUOlb4Anv0FQUw8NafuzYPw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <button>CPU Hog</button>
     <button>Go limit to 1 core</button>
     <button>100k idle task</button>
-    <canvas id="myCanvas" width="500" height="500"></canvas>
+    <div style="width: 600px;">
+        <canvas id="heartRateChart"></canvas>
+    </div>
+    <script src="flatline-client.js"></script>
 </body>
 </html>
