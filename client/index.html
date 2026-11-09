@@ -5,13 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goncurrenpy</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.umd.min.js" integrity="sha512-vMRyUfXe50uUhhDC+fk6UYBA/1VPj+I7Jn+wK0A3+wSVeUgT9OCz/xoF2M8KFvrmUOlb4Anv0FQUw8NafuzYPw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 16px auto; padding: 0 16px; }
+        header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+        h1 { margin: 0; }
+        .subtitle { color: #666; margin: 4px 0 12px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }
+        th { color: #666; font-weight: 600; }
+        td small { display: block; color: #666; margin-top: 2px; }
+        td .na { color: #999; }
+
+        button { min-width: 90px; padding: 4px 10px; cursor: pointer; }
+        button.active { background: #333; color: white; border-color: #333; }
+
+        .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+        h2 { margin: 0 0 4px; font-size: 1.1em; }
+        .status { margin: 0 0 8px; padding: 6px 10px; background: #f4f4f4; border-radius: 6px; min-height: 2.6em; }
+
+        @media (max-width: 800px) { .charts { grid-template-columns: 1fr; } }
+    </style>
 </head>
 <body>
-    <button>CPU Hog</button>
-    <button>Go limit to 1 core</button>
-    <button>100k idle task</button>
-    <div style="width: 600px;">
-        <canvas id="heartRateChart"></canvas>
+    <header>
+        <h1>Goncurrenpy</h1>
+        <button id="reset">Reset</button>
+    </header>
+    <p class="subtitle">Pick a scenario. Watch the heartbeat: if it keeps beating, the runtime is still scheduling other tasks.</p>
+
+    <table>
+        <thead>
+            <tr><th>Scenario</th><th>Python</th><th>Go</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1. CPU Hog</strong><small>An endless CPU-bound loop runs next to the heartbeat.</small></td>
+                <td>
+                    <button data-scenario="CPU Hog" data-lang="Python"
+                            data-expect="Flatline: the loop never awaits, so it blocks the event loop and the heartbeat stops.">Run</button>
+                    <small>Expect a <b>flatline</b>: it blocks the event loop.</small>
+                </td>
+                <td>
+                    <button data-scenario="CPU Hog" data-lang="Go"
+                            data-expect="Keeps beating: the busy goroutine runs on another core.">Run</button>
+                    <small>Expect a <b>steady beat</b>: the hog uses another core.</small>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>2. Go limited to 1 core</strong><small>Same CPU hog with <code>GOMAXPROCS=1</code>, like Python's single event loop.</small></td>
+                <td><span class="na">n/a: asyncio is already single-core (see 1)</span></td>
+                <td>
+                    <button data-scenario="Go limited to 1 core" data-lang="Go"
+                            data-expect="Keeps beating: Go's scheduler preempts the busy goroutine so the heartbeat still gets turns.">Run</button>
+                    <small>Expect a <b>steady beat</b>: the scheduler preempts the hog.</small>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>3. 100k idle tasks</strong><small>100,000 tasks that only sleep run next to the heartbeat.</small></td>
+                <td>
+                    <button data-scenario="100k idle tasks" data-lang="Python"
+                            data-expect="Keeps beating: sleeping coroutines cost almost nothing to schedule.">Run</button>
+                    <small>Expect a <b>steady beat</b>: sleeping coroutines are cheap.</small>
+                </td>
+                <td>
+                    <button data-scenario="100k idle tasks" data-lang="Go"
+                            data-expect="Keeps beating: sleeping goroutines cost almost nothing to schedule.">Run</button>
+                    <small>Expect a <b>steady beat</b>: sleeping goroutines are cheap.</small>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="charts">
+        <section>
+            <h2>Python</h2>
+            <p class="status" id="status-Python">Idle. Pick a scenario above.</p>
+            <canvas id="pythonChart"></canvas>
+        </section>
+        <section>
+            <h2>Go</h2>
+            <p class="status" id="status-Go">Idle. Pick a scenario above.</p>
+            <canvas id="goChart"></canvas>
+        </section>
     </div>
     <script src="flatline-client.js"></script>
 </body>
