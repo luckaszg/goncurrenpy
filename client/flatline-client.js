@@ -28,44 +28,76 @@ function ekgValue(t) {
     return 0; // Isoelectric baseline
 }
 
-// Start with a flat line; the signal scrolls in from the right
-const xLabels = Array.from({ length: totalPoints }, (_, i) => i);
-const yValues = new Array(totalPoints).fill(0);
+// 3. Create one heartbeat chart on the given canvas
+function createHeartbeatChart(canvasId, label, color) {
+    // Start with a flat line; the signal scrolls in from the right
+    const xLabels = Array.from({ length: totalPoints }, (_, i) => i);
+    const yValues = new Array(totalPoints).fill(0);
 
-// 3. Render the chart
-const ctx = document.getElementById('heartRateChart').getContext('2d');
-const chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: xLabels,
-        datasets: [{
-            label: 'Heart Rate (ECG)',
-            data: yValues,
-            borderColor: 'rgb(255, 45, 85)', // Medical red/pink
-            borderWidth: 2,
-            pointRadius: 0,                  // Removes dots for a clean line
-            tension: 0.15,                   // Smooths out the peak transitions slightly
-            fill: false
-        }]
-    },
-    options: {
-        animation: false, // Redraws every 10 ms; tweening would smear the trace
-        interaction: {
-            intersect: false,
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: xLabels,
+            datasets: [{
+                label: label,
+                data: yValues,
+                borderColor: color,
+                borderWidth: 2,
+                pointRadius: 0,   // Removes dots for a clean line
+                tension: 0.15,    // Smooths out the peak transitions slightly
+                fill: false
+            }]
         },
-        scales: {
-            x: { display: false },
-            y: { min: -0.5, max: 1.5 }, // Fixed bounds so the axis doesn't jump
-        },
-    }
-});
+        options: {
+            animation: false, // Redraws every 10 ms; tweening would smear the trace
+            interaction: {
+                intersect: false,
+            },
+            scales: {
+                x: { display: false },
+                y: { min: -0.5, max: 1.5 }, // Fixed bounds so the axis doesn't jump
+            },
+        }
+    });
+
+    return { chart, yValues };
+}
+
+const heartbeats = [
+    createHeartbeatChart('pythonChart', 'Python heartbeat', 'rgb(55, 118, 171)'), // Python blue
+    createHeartbeatChart('goChart', 'Go heartbeat', 'rgb(0, 173, 216)'),          // Go cyan
+];
 
 // 4. Stream one sample every 10 ms -> one full beat per second
 let sample = 0;
 setInterval(() => {
     const t = (sample % pointsPerBeat) / pointsPerBeat;
-    yValues.shift();
-    yValues.push(ekgValue(t));
+    for (const { chart, yValues } of heartbeats) {
+        yValues.shift();
+        yValues.push(ekgValue(t));
+        chart.update('none');
+    }
     sample++;
-    chart.update('none');
 }, tickMs);
+
+// 5. Scenario buttons: highlight the chosen one per language and show what to expect
+const buttons = document.querySelectorAll('button[data-scenario]');
+const idleText = 'Idle. Pick a scenario above.';
+
+buttons.forEach(button => {
+    button.addEventListener('click', () => {
+        const { lang, scenario, expect } = button.dataset;
+        buttons.forEach(b => {
+            if (b.dataset.lang === lang) b.classList.remove('active');
+        });
+        button.classList.add('active');
+        document.getElementById(`status-${lang}`).innerHTML = `<b>${scenario}</b> — ${expect}`;
+    });
+});
+
+// 6. Reset: clear every selection and status
+document.getElementById('reset').addEventListener('click', () => {
+    buttons.forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.status').forEach(el => { el.textContent = idleText; });
+});
