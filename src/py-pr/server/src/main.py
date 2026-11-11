@@ -23,8 +23,7 @@ async def heartbeat():
 
 @app.get("/python/hog", response_class=EventSourceResponse)
 async def python_hog():
-    # yield the result
-    while True:
-        await asyncio.sleep(5)
-        yield "data: Starting CPU Hog...\n\n"
+    results = flatline.cpu_hog(intensive=True)
+    async for result in results:
+        yield ServerSentEvent(data={"message": "success", "result": result}, event="python_hog", retry=5000)
 
