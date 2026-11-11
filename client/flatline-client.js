@@ -70,9 +70,20 @@ const heartbeats = [
 ];
 
 // 4. Stream one sample every 10 ms -> one full beat per second
+const evtSource = new EventSource('http://localhost:8000/heartbeat');
+
+let heartbeatSuccess = false;
+evtSource.addEventListener('heartbeat', (event) => {
+    const data = JSON.parse(event.data);
+    heartbeatSuccess = data.message === 'heartbeat';
+    setTimeout(() => {
+        heartbeatSuccess = false;
+    }, beatIntervalMs * 10);
+});
+
 let sample = 0;
 setInterval(() => {
-    const t = (sample % pointsPerBeat) / pointsPerBeat;
+    const t = heartbeatSuccess ? (sample % pointsPerBeat) / pointsPerBeat : 0;
     for (const { chart, yValues } of heartbeats) {
         yValues.shift();
         yValues.push(ekgValue(t));
@@ -101,3 +112,18 @@ document.getElementById('reset').addEventListener('click', () => {
     buttons.forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.status').forEach(el => { el.textContent = idleText; });
 });
+
+// Python's CPU hog button click event
+const pythonCpuHogButton = document.getElementById('python-cpu-hog');
+pythonCpuHogButton.addEventListener('click', () => {
+    pythonHog();
+});
+
+// Python's CPU hog call
+function pythonHog() {
+    console.log('Calling python hog...');
+    const pythonHogSource = new EventSource('http://localhost:8000/python/hog');
+    pythonHogSource.addEventListener('python_hog', (event) => {
+        console.log('Python hog event received:', event.data);
+    });
+}
