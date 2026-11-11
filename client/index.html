@@ -42,7 +42,7 @@
             <tr>
                 <td><strong>1. CPU Hog</strong><small>An endless CPU-bound loop runs next to the heartbeat.</small></td>
                 <td>
-                    <button data-scenario="CPU Hog" data-lang="Python"
+                    <button id="python-cpu-hog" data-scenario="CPU Hog" data-lang="Python"
                             data-expect="Flatline: the loop never awaits, so it blocks the event loop and the heartbeat stops.">Run</button>
                     <small>Expect a <b>flatline</b>: it blocks the event loop.</small>
                 </td>
@@ -90,5 +90,6 @@
         </section>
     </div>
     <script src="flatline-client.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>
