@@ -1,5 +1,6 @@
 import asyncio
 import logging
+
 from itertools import count
 
 
@@ -8,20 +9,19 @@ sleeping_time = 5  # seconds
 
 def super_expensive_computation():
     # Simulate a CPU-intensive task
-    total = 0
+    total = [0]
     for i in range(10**9):
-        total += i
+        total.append(i+total[i - 1])
     return total
 
 async def cpu_hog(intensive=False):
     logging.info(f"Task 1 is running...{' (intensive)' if intensive else ''}")
     if intensive:
-        result = super_expensive_computation()
-        logging.info(f"Result of super expensive computation: {result}")
-    else:
-        await asyncio.sleep(10)
+        yield super_expensive_computation()
+
+    await asyncio.sleep(10)
     logging.info("Task 1 is completed.")
-    return 1
+    yield 1
 
 async def task2fn():
     logging.info("Task 2 is running...")
