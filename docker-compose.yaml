@@ -1,0 +1,18 @@
+services:
+  server:
+    build:
+      context: .
+      target: server
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      target: client
+    ports:
+      - "9000:9000"
+    depends_on:
+      - server
+    restart: unless-stopped
