@@ -2,9 +2,25 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+type Event struct {
+	Message chan string
+
+	NewClients    chan chan string
+
+	ClosedClients chan chan string
+
+	TotalClients map[chan string]bool
+}
+
+type ClientChan chan string
 
 func iff(condition bool, trueVal string, falseVal string) string {
 	if condition {
@@ -27,7 +43,7 @@ func very_expensive_computation() {
 	}
 }
 
-func first_task(intensive bool, wg *sync.WaitGroup) {
+func cpu_hog(intensive bool, wg *sync.WaitGroup) {
 	fmt.Printf("Task 1 is running...%s\n", iff(intensive, "(intensive)", "not intensive"))
 	defer wg.Done()
 	if intensive {
@@ -38,30 +54,122 @@ func first_task(intensive bool, wg *sync.WaitGroup) {
 	}
 }
 
-func second_task(wg *sync.WaitGroup) {
-	defer wg.Done()
-	fmt.Println("Task 2 is running...")
-	time.Sleep(5 * time.Second)
-	fmt.Println("Task 2 finished")
+func NewServer() (event *Event) {
+	event = &Event{
+		Message: make(chan string),
+		NewClients: make(chan chan string),
+		ClosedClients: make(chan chan string),
+		TotalClients: make(map[chan string]bool),
+	}
+
+	go event.listen()
+
+	return event
 }
 
+func (stream *Event) listen() {
+	for {
+		select {
+		case client := <-stream.NewClients:
+			stream.TotalClients[client] = true
+			log.Printf("Client added. %d registered clients", len(stream.TotalClients))
+		
+		case client := <-stream.ClosedClients:
+			delete(stream.TotalClients, client)
+			close(client)
+			log.Printf("Removed client. &d registered clients", len(stream.TotalClients))
+
+		case eventMsg := <-stream.Message:
+			for clientMessageChan := range stream.TotalClients {
+				select {
+				case clientMessageChan <- eventMsg:
+					// message sent successfully
+				default:
+					// Failed to send, dropping message
+				}
+			}
+		}
+	}
+}
+
+func (stream *Event) serveHTTP() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clientChan := make(ClientChan)
+
+		stream.NewClients <- clientChan
+
+		go func() {
+			<-c.Writer.CloseNotify()
+
+			stream.ClosedClients <- clientChan
+		}()
+
+		c.Set("clientChan", clientChan)
+
+		c.Next()
+	}
+}
+
+func HeadersMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Content-Type", "text/event-stream")
+		c.Writer.Header().Set("Cache-Control", "no-cache")
+		c.Writer.Header().Set("Connection", "keep-alive")
+		c.Writer.Header().Set("Transfer-Encoding", "chunked")
+		c.Next()
+	}
+}
+
+
 func main() {
-	heartbeat_channel := make(chan bool)
-	// first_task_channel := make(chan bool)
-	// second_task_channel := make(chan bool)
 
-	var wg = sync.WaitGroup{}
+	router := gin.Default()
 
-	go heartbeat(heartbeat_channel)
-	<-heartbeat_channel
+	stream := NewServer()
 
-	wg.Add(2)
+	go func() {
+		for {
+			time.Sleep(time.Second * 10)
+			now := time.Now().Format("2026-03-08 16:45:20")
+			currentTime := fmt.Sprintf("The Current Time is %v", now)
 
-	go first_task(true, &wg)
-	go second_task(&wg)
+			stream.Message <- currentTime
+		}
+	}()
 
-	wg.Wait()
+	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{
+		"admin": "admin123",
+	}))
+
+	authorized.GET("/stream", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
+		v, ok := c.Get("clientChan")
+		if !ok {
+			return
+		}
+		clientChan, ok := v.(ClientChan)
+		if !ok {
+			return
+		}
+		c.Stream(func(w io.Writer) bool {
+			if msg, ok := <-clientChan; ok {
+				c.SSEvent("message", msg)
+				return true
+			}
+			return false
+		})
+	})
+
+	_ = router.Run(":8085")
+
+
+	// var wg = sync.WaitGroup{}
+
+
+	// wg.Add(2)
+
+	// go first_task(true, &wg)
+	// go second_task(&wg)
+
+	// wg.Wait()
 	
-	// <-first_task_channel
-	// <-second_task_channel
 }
