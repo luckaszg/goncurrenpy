@@ -26,4 +26,3 @@ async def python_hog():
     results = flatline.cpu_hog(intensive=True)
     async for result in results:
         yield ServerSentEvent(data={"message": "success", "result": result}, event="python_hog", retry=5000)
-
