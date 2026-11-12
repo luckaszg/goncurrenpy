@@ -77,7 +77,7 @@ func (stream *Event) listen() {
 		case client := <-stream.ClosedClients:
 			delete(stream.TotalClients, client)
 			close(client)
-			log.Printf("Removed client. &d registered clients", len(stream.TotalClients))
+			log.Printf("Removed client. %d registered clients", len(stream.TotalClients))
 
 		case eventMsg := <-stream.Message:
 			for clientMessageChan := range stream.TotalClients {
