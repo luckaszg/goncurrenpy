@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,13 +33,19 @@ func very_expensive_computation() {
 }
 
 type Event struct {
-	Message chan string
+	Message chan Heartbeat
 
 	NewClients    chan chan string
 
 	ClosedClients chan chan string
 
 	TotalClients map[chan string]bool
+}
+
+type Heartbeat struct {
+	Message string
+
+	Active bool
 }
 
 type ClientChan chan string
@@ -56,7 +63,7 @@ func cpu_hog(intensive bool, wg *sync.WaitGroup) {
 
 func NewServer() (event *Event) {
 	event = &Event{
-		Message: make(chan string),
+		Message: make(chan Heartbeat),
 		NewClients: make(chan chan string),
 		ClosedClients: make(chan chan string),
 		TotalClients: make(map[chan string]bool),
@@ -82,7 +89,7 @@ func (stream *Event) listen() {
 		case eventMsg := <-stream.Message:
 			for clientMessageChan := range stream.TotalClients {
 				select {
-				case clientMessageChan <- eventMsg:
+				case clientMessageChan <- eventMsg.Message:
 					// message sent successfully
 				default:
 					// Failed to send, dropping message
@@ -125,15 +132,25 @@ func main() {
 
 	router := gin.Default()
 
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:9000"},
+		AllowMethods: []string{"GET"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders: []string{"Content-Length"},
+		MaxAge: 12 * time.Hour,
+	}))
+
 	stream := NewServer()
 
 	go func() {
 		for {
 			time.Sleep(time.Second * 10)
-			now := time.Now().Format("2026-03-08 16:45:20")
-			currentTime := fmt.Sprintf("The Current Time is %v", now)
+			heartbeat := Heartbeat{
+				Message: "heartbeat",
+				Active: true,
+			}
 
-			stream.Message <- currentTime
+			stream.Message <- heartbeat
 		}
 	}()
 
@@ -141,7 +158,7 @@ func main() {
 	// 	"admin": "admin123",
 	// }))
 
-	router.GET("/stream", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
+	router.GET("/heartbeat", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
 		v, ok := c.Get("clientChan")
 		if !ok {
 			return
@@ -152,7 +169,7 @@ func main() {
 		}
 		c.Stream(func(w io.Writer) bool {
 			if msg, ok := <-clientChan; ok {
-				c.SSEvent("message", msg)
+				c.SSEvent("heartbeat", msg)
 				return true
 			}
 			return false
