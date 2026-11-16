@@ -47,7 +47,7 @@
                     <small>Expect a <b>flatline</b>: it blocks the event loop.</small>
                 </td>
                 <td>
-                    <button data-scenario="CPU Hog" data-lang="Go"
+                    <button id="golang-cpu-hog" data-scenario="CPU Hog" data-lang="Go"
                             data-expect="Keeps beating: the busy goroutine runs on another core.">Run</button>
                     <small>Expect a <b>steady beat</b>: the hog uses another core.</small>
                 </td>
@@ -89,6 +89,7 @@
             <canvas id="goChart"></canvas>
         </section>
     </div>
-    <script src="flatline-client.js"></script>
+    <script src="py-client.js"></script>
+    <script src="go-client.js"></script>
 </body>
 </html>
