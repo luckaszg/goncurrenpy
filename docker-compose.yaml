@@ -6,6 +6,14 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+  
+  goserver:
+    build:
+      context: .
+      target: goserver
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
 
   client:
     build:

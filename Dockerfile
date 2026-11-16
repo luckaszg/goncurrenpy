@@ -7,7 +7,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# Install dependencies first (cached unless the lockfile changes)
+# Install Python dependencies first (cached unless the lockfile changes)
 COPY src/py-pr/server/pyproject.toml src/py-pr/server/uv.lock src/py-pr/server/.python-version ./
 RUN uv sync --locked --no-install-project --no-dev
 
@@ -19,6 +19,23 @@ ENV PATH="/app/.venv/bin:$PATH"
 WORKDIR /app/src
 EXPOSE 8000
 CMD ["fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
+
+# ----------- Go Server -------------
+FROM golang:1.26-alpine as goserver
+
+WORKDIR /app
+
+COPY src/go-pr/go.mod src/go-pr/go.sum ./
+
+COPY src/go-pr ./
+
+RUN go mod download
+
+RUN go build -o app
+
+EXPOSE 8085
+
+ENTRYPOINT ["./app"]
 
 
 # ---------- Bun client ----------
