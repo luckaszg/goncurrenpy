@@ -10,18 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Event struct {
-	Message chan string
-
-	NewClients    chan chan string
-
-	ClosedClients chan chan string
-
-	TotalClients map[chan string]bool
-}
-
-type ClientChan chan string
-
 func iff(condition bool, trueVal string, falseVal string) string {
 	if condition {
 		return trueVal
@@ -42,6 +30,18 @@ func very_expensive_computation() {
 	for {
 	}
 }
+
+type Event struct {
+	Message chan string
+
+	NewClients    chan chan string
+
+	ClosedClients chan chan string
+
+	TotalClients map[chan string]bool
+}
+
+type ClientChan chan string
 
 func cpu_hog(intensive bool, wg *sync.WaitGroup) {
 	fmt.Printf("Task 1 is running...%s\n", iff(intensive, "(intensive)", "not intensive"))
@@ -137,11 +137,11 @@ func main() {
 		}
 	}()
 
-	authorized := router.Group("/", gin.BasicAuth(gin.Accounts{
-		"admin": "admin123",
-	}))
+	// authorized := router.Group("/", gin.BasicAuth(gin.Accounts{
+	// 	"admin": "admin123",
+	// }))
 
-	authorized.GET("/stream", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
+	router.GET("/stream", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
 		v, ok := c.Get("clientChan")
 		if !ok {
 			return
