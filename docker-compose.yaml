@@ -22,10 +22,8 @@ services:
     restart: unless-stopped
     develop:
       watch:
-        - action: sync
+        - action: rebuild
           path: ./src/go-pr/
-          target: ./app
-          initial_sync: true
 
   client:
     build:
