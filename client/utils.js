@@ -2,6 +2,7 @@ const totalPoints = 300;
 
 // Visible window width (3 seconds of signal)
 export const pointsPerBeat = 100;   // Samples per heartbeat
+export const beatIntervalMs = 1000; // One heartbeat every second (60 BPM)
 export const tickMs = beatIntervalMs / pointsPerBeat; // 10 ms per sample
 
 export const SERVER_INTERVAL_MS = 10_000;
