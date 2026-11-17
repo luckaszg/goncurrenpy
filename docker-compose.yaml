@@ -6,6 +6,12 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./src/py-pr/server/src
+          target: ./app/src
+          initial_sync: true
   
   goserver:
     build:
@@ -14,6 +20,12 @@ services:
     ports:
       - "8085:8085"
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./src/go-pr/
+          target: ./app
+          initial_sync: true
 
   client:
     build:
@@ -24,3 +36,14 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./client
+          target: ./app
+          initial_sync: true
+          ignore:
+            - node_modules/
+        
+        - action: rebuild
+          path: package.json
