@@ -1,4 +1,4 @@
-import { pointsPerBeat, beatIntervalMs, tickMs, ekgValue, createHeartbeatChart } from './utils.js';
+import { pointsPerBeat, tickMs, ekgValue, createHeartbeatChart, SERVER_INTERVAL_MS } from './utils.js';
 
 const GIN_URL = `${process.env.PUBLIC_GIN_URL}`
 
@@ -6,17 +6,13 @@ const golangHeartbeat = createHeartbeatChart('goChart', 'Golang heartbeat', 'rgb
 
 const evtSource = new EventSource(`${GIN_URL}/heartbeat`);
 
-let heartbeatSuccess = false;
-evtSource.addEventListener('heartbeat', (event) => {
-    heartbeatSuccess = true;
-    setTimeout(() => {
-        heartbeatSuccess = false;
-    }, beatIntervalMs * 10);
-});
+let lastBeatAt = -Infinity;
+evtSource.addEventListener('heartbeat', (event) => { lastBeatAt = performance.now() });
 
 let sample = 0;
 setInterval(() => {
-    const t = heartbeatSuccess ? (sample % pointsPerBeat) / pointsPerBeat : 0;
+    const alive = performance.now() - lastBeatAt < SERVER_INTERVAL_MS * 2;
+    const t = alive ? (sample % pointsPerBeat) / pointsPerBeat : 0;
     const { chart: golangChart, yValues: golangYValues } = golangHeartbeat;
     golangYValues.shift();
     golangYValues.push(ekgValue(t));

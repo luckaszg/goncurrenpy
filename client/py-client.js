@@ -1,4 +1,4 @@
-import { pointsPerBeat, beatIntervalMs, tickMs, ekgValue, createHeartbeatChart } from './utils.js';
+import { pointsPerBeat, tickMs, ekgValue, createHeartbeatChart, SERVER_INTERVAL_MS } from './utils.js';
 
 const FAST_API_URL = `${process.env.PUBLIC_FAST_API_URL}`
 
@@ -6,18 +6,13 @@ const pythonHeartbeat = createHeartbeatChart('pythonChart', 'Python heartbeat', 
 
 const evtSource = new EventSource(`${FAST_API_URL}/heartbeat`);
 
-let heartbeatSuccess = false;
-evtSource.addEventListener('heartbeat', (event) => {
-    const data = JSON.parse(event.data);
-    heartbeatSuccess = data.message === 'heartbeat';
-    setTimeout(() => {
-        heartbeatSuccess = false;
-    }, beatIntervalMs * 10);
-});
+let lastBeatAt = -Infinity;
+evtSource.addEventListener('heartbeat', (event) => { lastBeatAt = performance.now() });
 
 let sample = 0;
 setInterval(() => {
-    const t = heartbeatSuccess ? (sample % pointsPerBeat) / pointsPerBeat : 0;
+    const alive = performance.now() - lastBeatAt < SERVER_INTERVAL_MS * 2;
+    const t = alive ? (sample % pointsPerBeat) / pointsPerBeat : 0;
     const { chart: pythonChart, yValues: pythonYValues } = pythonHeartbeat;
     pythonYValues.shift();
     pythonYValues.push(ekgValue(t));
