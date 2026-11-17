@@ -101,7 +101,7 @@ func (stream *Event) listen() {
 
 func (stream *Event) serveHTTP() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		clientChan := make(ClientChan)
+		clientChan := make(ClientChan, 1)
 
 		stream.NewClients <- clientChan
 
@@ -144,7 +144,7 @@ func main() {
 
 	go func() {
 		for {
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 5)
 			heartbeat := Heartbeat{
 				Message: "heartbeat",
 				Active: true,
