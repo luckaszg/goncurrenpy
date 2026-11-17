@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -26,12 +25,6 @@ func heartbeat(ch chan <- bool) {
 	}
 }
 
-func very_expensive_computation() {
-	fmt.Println("Very expensive computation running...")
-	for {
-	}
-}
-
 type Event struct {
 	Message chan Heartbeat
 
@@ -50,15 +43,13 @@ type Heartbeat struct {
 
 type ClientChan chan string
 
-func cpu_hog(intensive bool, wg *sync.WaitGroup) {
-	fmt.Printf("Task 1 is running...%s\n", iff(intensive, "(intensive)", "not intensive"))
-	defer wg.Done()
-	if intensive {
-		very_expensive_computation()
-	} else {
-		time.Sleep(10 * time.Second)
-		fmt.Println("Task 1 finished")
+func cpu_hog(d time.Duration) uint64 {
+	deadline := time.Now().Add(d)
+	var n uint64
+	for time.Now().Before(deadline) {
+		n++
 	}
+	return n
 }
 
 func NewServer() (event *Event) {
@@ -174,6 +165,14 @@ func main() {
 			}
 			return false
 		})
+	})
+
+	router.GET("/hog", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
+		start := time.Now()
+		n := cpu_hog(15 * time.Second)
+
+		c.SSEvent("hog", fmt.Sprintf("%d iterations in %s", n, time.Since(start).Round(time.Millisecond)))
+		c.Writer.Flush()
 	})
 
 	_ = router.Run(":8085")
