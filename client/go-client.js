@@ -11,7 +11,7 @@ evtSource.addEventListener('heartbeat', (event) => { lastBeatAt = performance.no
 
 let sample = 0;
 setInterval(() => {
-    const alive = performance.now() - lastBeatAt < SERVER_INTERVAL_MS * 2;
+    const alive = performance.now() - lastBeatAt < SERVER_INTERVAL_MS * 1.5;
     const t = alive ? (sample % pointsPerBeat) / pointsPerBeat : 0;
     const { chart: golangChart, yValues: golangYValues } = golangHeartbeat;
     golangYValues.shift();
@@ -33,5 +33,7 @@ function golangHog() {
     const golangHogSource = new EventSource(`${GIN_URL}/hog`);
     golangHogSource.addEventListener('hog', (event) => {
         console.log('Result of super expensive computation:', event.data);
+        golangHogSource.close();
     });
+    golangHogSource.onerror = () => golangHogSource.close();
 }

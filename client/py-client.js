@@ -11,7 +11,7 @@ evtSource.addEventListener('heartbeat', (event) => { lastBeatAt = performance.no
 
 let sample = 0;
 setInterval(() => {
-    const alive = performance.now() - lastBeatAt < SERVER_INTERVAL_MS * 2;
+    const alive = performance.now() - lastBeatAt < SERVER_INTERVAL_MS * 1.5;
     const t = alive ? (sample % pointsPerBeat) / pointsPerBeat : 0;
     const { chart: pythonChart, yValues: pythonYValues } = pythonHeartbeat;
     pythonYValues.shift();
@@ -33,5 +33,7 @@ function pythonHog() {
     const pythonHogSource = new EventSource(`${FAST_API_URL}/hog`);
     pythonHogSource.addEventListener('python_hog', (event) => {
         console.log('Result of super expensive computation:', event.data);
+        pythonHogSource.close();
     });
+    pythonHogSource.onerror = () => pythonHogSource.close();
 }
