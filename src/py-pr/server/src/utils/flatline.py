@@ -1,18 +1,22 @@
 import asyncio
 import logging
+import time
 
 from itertools import count
 
 
 sleeping_time = 5  # seconds
 
+HOG_SECONDS = 15
+
 
 def super_expensive_computation():
     # Simulate a CPU-intensive task
-    total = [0]
-    for i in range(10**7):
-        total.append(i+total[i - 1])
-    return total
+    deadline = time.perf_counter() + HOG_SECONDS
+    n = 0
+    while time.perf_counter() < deadline:
+        n += 1
+    return n
 
 async def cpu_hog(intensive=False):
     logging.info(f"Task 1 is running...{' (intensive)' if intensive else ''}")
