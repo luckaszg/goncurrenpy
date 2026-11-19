@@ -14,15 +14,12 @@ origins = [
 
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
 
-
 @app.get("/heartbeat", response_class=EventSourceResponse)
 async def heartbeat():
     async for beat in flatline.heartbeat():
         yield ServerSentEvent(data={"message": "heartbeat", "beat": beat}, event="heartbeat", retry=5000)
 
 
-@app.get("/hog", response_class=EventSourceResponse)
+@app.get("/hog")
 async def python_hog():
-    results = flatline.cpu_hog(intensive=True)
-    async for result in results:
-        yield ServerSentEvent(data={"message": "success", "result": result}, event="python_hog", retry=5000)
+    return await flatline.cpu_hog()
