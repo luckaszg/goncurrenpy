@@ -1,4 +1,4 @@
-import { pointsPerBeat, tickMs, ekgValue, createHeartbeatChart, SERVER_INTERVAL_MS } from './utils.js';
+import { pointsPerBeat, tickMs, ekgValue, createHeartbeatChart, SERVER_INTERVAL_MS, setHogRunning, createHogStatus } from './utils.js';
 
 const FAST_API_URL = `${process.env.PUBLIC_FAST_API_URL}`
 
@@ -23,17 +23,28 @@ setInterval(() => {
 
 // Python's CPU hog button click event
 const pythonCpuHogButton = document.getElementById('python-cpu-hog');
+const setPythonHogRunning = (running) => setHogRunning(pythonCpuHogButton, running);
+const pythonHogStatus = createHogStatus(document.getElementById('status-Python'));
+
 pythonCpuHogButton.addEventListener('click', () => {
+    setPythonHogRunning(true);
     pythonHog();
 });
 
 // Python's CPU hog call
-function pythonHog() {
-    console.log('Calling python hog...');
-    const pythonHogSource = new EventSource(`${FAST_API_URL}/hog`);
-    pythonHogSource.addEventListener('python_hog', (event) => {
-        console.log('Result of super expensive computation:', event.data);
-        pythonHogSource.close();
-    });
-    pythonHogSource.onerror = () => pythonHogSource.close();
+async function pythonHog() {
+    pythonHogStatus.start();
+    try {
+        const response = await fetch(`${FAST_API_URL}/hog`);
+        if (!response.ok) {
+            throw new Error(`HTTP error!`);
+        }
+        const data = await response.json();
+        pythonHogStatus.finish(data);
+    } catch(e) {
+        console.error(e);
+        pythonHogStatus.fail(e);
+    } finally {
+        setPythonHogRunning(false);
+    }
 }

@@ -1,4 +1,4 @@
-import { pointsPerBeat, tickMs, ekgValue, createHeartbeatChart, SERVER_INTERVAL_MS } from './utils.js';
+import { pointsPerBeat, tickMs, ekgValue, createHeartbeatChart, SERVER_INTERVAL_MS, setHogRunning, createHogStatus } from './utils.js';
 
 const GIN_URL = `${process.env.PUBLIC_GIN_URL}`
 
@@ -23,17 +23,28 @@ setInterval(() => {
 
 // Golang's CPU hog button click event
 const golangCpuHogButton = document.getElementById('golang-cpu-hog');
+const setGolangHogRunning = (running) => setHogRunning(golangCpuHogButton, running);
+const golangHogStatus = createHogStatus(document.getElementById('status-Go'));
+
 golangCpuHogButton.addEventListener('click', () => {
+    setGolangHogRunning(true);
     golangHog();
 });
 
 // Golang's CPU hog call
-function golangHog() {
-    console.log('Calling golang hog...');
-    const golangHogSource = new EventSource(`${GIN_URL}/hog`);
-    golangHogSource.addEventListener('hog', (event) => {
-        console.log('Result of super expensive computation:', event.data);
-        golangHogSource.close();
-    });
-    golangHogSource.onerror = () => golangHogSource.close();
+async function golangHog() {
+    golangHogStatus.start();
+    try {
+        const response = await fetch(`${GIN_URL}/hog`);
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        const data = await response.json();
+        golangHogStatus.finish(data);
+    } catch (e) {
+        console.error(e);
+        golangHogStatus.fail(e);
+    } finally {
+        setGolangHogRunning(false);
+    }
 }

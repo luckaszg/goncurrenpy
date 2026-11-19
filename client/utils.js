@@ -65,3 +65,56 @@ export function createHeartbeatChart(canvasId, label, color) {
 
     return { chart, yValues };
 }
+
+// Show a spinner on a scenario's Run button while its hog runs, and block repeat clicks
+export function setHogRunning(runButton, running) {
+    runButton.disabled = running;
+    runButton.classList.toggle('running', running);
+    runButton.textContent = running ? 'Running…' : 'Run';
+}
+
+// Drive a chart's status line through a hog run: live timer while it runs, result when done.
+// Reads { count, limit, elapsed_ms } from the server; limit and elapsed_ms are optional
+// (falls back to the browser's own timing), and a bare number is treated as the count.
+export function createHogStatus(statusEl) {
+    let startedAt = 0;
+    let timer = null;
+
+    const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`;
+    const stopTimer = () => { clearInterval(timer); timer = null; };
+
+    return {
+        start() {
+            startedAt = performance.now();
+            const render = () => {
+                statusEl.textContent = `Running: counting primes… ${seconds(performance.now() - startedAt)}`;
+            };
+            render();
+            stopTimer();
+            timer = setInterval(render, 100);
+        },
+        finish(data) {
+            stopTimer();
+            const { count, limit, elapsed_ms } = typeof data === 'number' ? { count: data } : (data ?? {});
+            const elapsedMs = elapsed_ms ?? performance.now() - startedAt;
+
+            const below = limit != null ? ` below ${limit.toLocaleString()}` : '';
+            const rate = limit != null && elapsedMs > 0
+                ? ` (≈ ${Math.round(limit / (elapsedMs / 1000)).toLocaleString()} numbers/s)`
+                : '';
+
+            statusEl.innerHTML = '';
+            statusEl.append(
+                'Done: found ',
+                Object.assign(document.createElement('b'), { textContent: `${Number(count).toLocaleString()} primes` }),
+                `${below} in `,
+                Object.assign(document.createElement('b'), { textContent: seconds(elapsedMs) }),
+                rate,
+            );
+        },
+        fail(error) {
+            stopTimer();
+            statusEl.textContent = `Failed: ${error?.message ?? error}`;
+        },
+    };
+}
