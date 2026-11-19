@@ -44,7 +44,7 @@ type Heartbeat struct {
 
 type ClientChan chan string
 
-const HOG_LIMIT = 73_000_000
+const HOG_LIMIT = 37_000_000
 
 func is_prime(n int) bool {
 	if n < 2 {

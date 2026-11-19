@@ -7,7 +7,7 @@ from itertools import count
 
 sleeping_time = 5  # seconds
 
-HOG_LIMIT = 9_000_000
+HOG_LIMIT = 4_700_000
 
 def is_prime(n):
     if n < 2:
