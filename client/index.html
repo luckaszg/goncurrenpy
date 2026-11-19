@@ -18,6 +18,8 @@
         td .na { color: #999; }
 
         button { min-width: 90px; padding: 4px 10px; cursor: pointer; }
+        button:disabled:not(.running) { cursor: not-allowed; opacity: 0.5; }
+        td small.wip { color: #b26a00; font-weight: 600; }
         button.active { background: #333; color: white; border-color: #333; }
         button.running { display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: progress; }
         button.running::before {
@@ -37,7 +39,7 @@
 <body>
     <header>
         <h1>Goncurrenpy</h1>
-        <button id="reset">Reset</button>
+        <button id="reset" disabled>Reset</button>
     </header>
     <p class="subtitle">Pick a scenario. Watch the heartbeat: if it keeps beating, the runtime is still scheduling other tasks.</p>
 
@@ -63,9 +65,10 @@
                 <td><strong>2. CPU Hog with 1 core</strong><small>Same CPU hog with <code>GOMAXPROCS=1</code>, like Python's single event loop.</small></td>
                 <td><span class="na">asyncio is already single-core because of how GIL works in CPython</span></td>
                 <td>
-                    <button data-scenario="Go limited to 1 core" data-lang="Go"
+                    <button data-scenario="Go limited to 1 core" data-lang="Go" disabled
                             data-expect="Keeps beating: Go's scheduler preempts the busy goroutine so the heartbeat still gets turns.">Run</button>
                     <small>Expect a <b>steady beat</b>: the scheduler preempts the hog.</small>
+                    <small class="wip">WIP: not available yet.</small>
                 </td>
             </tr>
             <!-- <tr>
