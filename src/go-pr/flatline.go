@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -43,13 +44,33 @@ type Heartbeat struct {
 
 type ClientChan chan string
 
-func cpu_hog(d time.Duration) uint64 {
-	deadline := time.Now().Add(d)
-	var n uint64
-	for time.Now().Before(deadline) {
-		n++
+const HOG_LIMIT = 73_000_000
+
+func is_prime(n int) bool {
+	if n < 2 {
+		return false
 	}
-	return n
+	if n % 2 == 0 {
+		return n == 2
+	}
+	i := 3
+	for i * i <= n {
+		if n % i == 0 {
+			return false
+		}
+		i += 2
+	}
+	return true
+}
+
+func cpu_hog() uint64 {
+	var count uint64
+	for n := range HOG_LIMIT {
+		if is_prime(n) {
+			count++
+		}
+	}
+	return count
 }
 
 func NewServer() (event *Event) {
@@ -167,12 +188,15 @@ func main() {
 		})
 	})
 
-	router.GET("/hog", HeadersMiddleware(), stream.serveHTTP(), func(c *gin.Context) {
+	router.GET("/hog", stream.serveHTTP(), func(c *gin.Context) {
 		start := time.Now()
-		n := cpu_hog(15 * time.Second)
+		n := cpu_hog()
 
-		c.SSEvent("hog", fmt.Sprintf("%d iterations in %s", n, time.Since(start).Round(time.Millisecond)))
-		c.Writer.Flush()
+		c.JSON(http.StatusOK, gin.H {
+			"count": n,
+			"limit": HOG_LIMIT,
+			"elapsed_ms": time.Since(start).Milliseconds(),
+		})
 	})
 
 	_ = router.Run(":8085")
