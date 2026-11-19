@@ -19,6 +19,13 @@
 
         button { min-width: 90px; padding: 4px 10px; cursor: pointer; }
         button.active { background: #333; color: white; border-color: #333; }
+        button.running { display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: progress; }
+        button.running::before {
+            content: ""; width: 0.8em; height: 0.8em; border-radius: 50%;
+            border: 2px solid currentColor; border-right-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
         h2 { margin: 0 0 4px; font-size: 1.1em; }
@@ -53,15 +60,15 @@
                 </td>
             </tr>
             <tr>
-                <td><strong>2. Go limited to 1 core</strong><small>Same CPU hog with <code>GOMAXPROCS=1</code>, like Python's single event loop.</small></td>
-                <td><span class="na">n/a: asyncio is already single-core (see 1)</span></td>
+                <td><strong>2. CPU Hog with 1 core</strong><small>Same CPU hog with <code>GOMAXPROCS=1</code>, like Python's single event loop.</small></td>
+                <td><span class="na">asyncio is already single-core because of how GIL works in CPython</span></td>
                 <td>
                     <button data-scenario="Go limited to 1 core" data-lang="Go"
                             data-expect="Keeps beating: Go's scheduler preempts the busy goroutine so the heartbeat still gets turns.">Run</button>
                     <small>Expect a <b>steady beat</b>: the scheduler preempts the hog.</small>
                 </td>
             </tr>
-            <tr>
+            <!-- <tr>
                 <td><strong>3. 100k idle tasks</strong><small>100,000 tasks that only sleep run next to the heartbeat.</small></td>
                 <td>
                     <button data-scenario="100k idle tasks" data-lang="Python"
@@ -73,7 +80,7 @@
                             data-expect="Keeps beating: sleeping goroutines cost almost nothing to schedule.">Run</button>
                     <small>Expect a <b>steady beat</b>: sleeping goroutines are cheap.</small>
                 </td>
-            </tr>
+            </tr> -->
         </tbody>
     </table>
 
